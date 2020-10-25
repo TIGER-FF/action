@@ -1,36 +1,67 @@
-const p = require("phin");
 const core = require("@actions/core");
-const { execSync } = require("child_process");
+const { execSync, exec } = require("child_process");
 const fs = require("fs");
 const path = require("path");
+const { hasUncaughtExceptionCaptureCallback } = require("process");
 
-// Support Functions
-const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+var inVars = getInputVars();
+catNetrcFile(inVars);
+gitCredentials(inVars);
+createProcfile(inVars);
+loginHeroku();
+selectHerokuApp(inVars);
+addBuildpacks(inVars);
+addConfigs(inVars);
+addDynamicFiles(inVars);
+deploy(inVars);
 
-const createCatFile = ({ email, api_key }) => `cat >~/.netrc <<EOF
-machine api.heroku.com
-    login ${email}
-    password ${api_key}
-machine git.heroku.com
-    login ${email}
-    password ${api_key}
-EOF`;
+function gitCredentials({email}){
+  execComm(`git config --global user.name "Automated Heroku Deploy"`);
+  execComm(`git config --global user.email "${email}"`);
+}
 
-const addRemote = ({ app_name, buildpack }) => {
-  try {
-    execSync("heroku git:remote --app " + app_name);
-    console.log("Added git remote heroku");
-  } catch (err) {
-    execSync(
-      "heroku create " +
-        app_name +
-        (buildpack ? " --buildpack " + buildpack : "")
+function deploy({useforce, branch,appdir}){
+
+  if (appdir === "") {
+    execComm(`git push heroku ${branch}:refs/heads/master ${useforce? "--force" : ""}`);
+  } else {
+    execComm(
+      `git push ${useforce? "--force" : ""} heroku \`git subtree split --prefix=${appdir} ${branch}\`:refs/heads/master`
     );
-    console.log("Successfully created a new heroku app");
   }
-};
+  
+}
 
-const addConfig = ({ app_name, env_file, appdir }) => {
+function addBuildpacks({buildpacks}){
+
+  if(buildpacks){
+    execComm("heroku buildpacks:clear");
+
+    var buildpacks = JSON.parse(buildpacks);
+
+    // Add first buildpack 
+    var buildpack = buildpacks.shift();
+    execComm(`heroku buildpacks:set ${buildpack}`);
+
+    // Add anothers buildpacks
+    buildpacks.forEach((bp) => {
+      execComm(`heroku buildpacks:add ${bp}`);
+    });
+
+    console.log("Added buildpacks");
+    
+  }
+
+}
+
+function addDynamicFiles({ dynamicFiles }){
+  if(dynamicFiles){
+    execComm(`git add -A . && git commit -m "Added dynamic files"`);
+    console.log("Added dynamic files");
+  }
+}
+
+function addConfigs({ app_name, env_file, appdir }){
   let configVars = [];
   for (let key in process.env) {
     if (key.startsWith("HD_")) {
@@ -47,192 +78,69 @@ const addConfig = ({ app_name, env_file, appdir }) => {
     configVars = [...configVars, ...newVars];
   }
   if (configVars.length !== 0) {
-    execSync(`heroku config:set --app=${app_name} ${configVars.join(" ")}`);
+    execComm(`heroku config:set --app=${app_name} ${configVars.join(" ")}`);
   }
-};
+}
 
-const createProcfile = ({ procfile, appdir }) => {
+function selectHerokuApp ({ app_name }) {
+  try {
+    execComm(`heroku git:remote --app ${app_name}`);
+    console.log("Added git remote heroku");
+  } catch (err) {
+    execComm(`heroku create ${app_name}`);
+    console.log("Successfully created a new heroku app");
+  }
+}
+
+function loginHeroku(){
+  execComm("heroku login");
+  console.log("Successfully logged into heroku");
+}
+
+function createProcfile({ procfile, appdir }){
   if (procfile) {
     fs.writeFileSync(path.join(appdir, "Procfile"), procfile);
-    execSync(`git add -A && git commit -m "Added Procfile"`);
+    execComm(`git add -A ${path.join(appdir, "Procfile")} && git commit -m 'Added Procfile'`);
     console.log("Written Procfile with custom configuration");
   }
-};
-
-const deploy = ({
-  dontuseforce,
-  app_name,
-  branch,
-  usedocker,
-  dockerHerokuProcessType,
-  dockerBuildArgs,
-  appdir,
-}) => {
-  const force = !dontuseforce ? "--force" : "";
-  if (usedocker) {
-    execSync(
-      `heroku container:push ${dockerHerokuProcessType} --app ${app_name} ${dockerBuildArgs}`,
-      appdir ? { cwd: appdir } : null
-    );
-    execSync(
-      `heroku container:release ${dockerHerokuProcessType} --app ${app_name}`,
-      appdir ? { cwd: appdir } : null
-    );
-  } else {
-    if (appdir === "") {
-      execSync(`git push heroku ${branch}:refs/heads/master ${force}`);
-    } else {
-      execSync(
-        `git push ${force} heroku \`git subtree split --prefix=${appdir} ${branch}\`:refs/heads/master`
-      );
-    }
-  }
-};
-
-const healthcheckFailed = ({
-  rollbackonhealthcheckfailed,
-  app_name,
-  appdir,
-}) => {
-  if (rollbackonhealthcheckfailed) {
-    execSync(
-      `heroku rollback --app ${app_name}`,
-      appdir ? { cwd: appdir } : null
-    );
-    core.setFailed(
-      "Health Check Failed. Error deploying Server. Deployment has been rolled back. Please check your logs on Heroku to try and diagnose the problem"
-    );
-  } else {
-    core.setFailed(
-      "Health Check Failed. Error deploying Server. Please check your logs on Heroku to try and diagnose the problem"
-    );
-  }
-};
-
-// Input Variables
-let heroku = {
-  api_key: core.getInput("heroku_api_key"),
-  email: core.getInput("heroku_email"),
-  app_name: core.getInput("heroku_app_name"),
-  buildpack: core.getInput("buildpack"),
-  branch: core.getInput("branch"),
-  dontuseforce: core.getInput("dontuseforce") === "false" ? false : true,
-  usedocker: core.getInput("usedocker") === "false" ? false : true,
-  dockerHerokuProcessType: core.getInput("docker_heroku_process_type"),
-  dockerBuildArgs: core.getInput("docker_build_args"),
-  appdir: core.getInput("appdir"),
-  healthcheck: core.getInput("healthcheck"),
-  checkstring: core.getInput("checkstring"),
-  delay: parseInt(core.getInput("delay")),
-  procfile: core.getInput("procfile"),
-  rollbackonhealthcheckfailed:
-    core.getInput("rollbackonhealthcheckfailed") === "false" ? false : true,
-  env_file: core.getInput("env_file"),
-  justlogin: core.getInput("justlogin") === "false" ? false : true,
-};
-
-// Formatting
-if (heroku.appdir) {
-  heroku.appdir =
-    heroku.appdir[0] === "." && heroku.appdir[1] === "/"
-      ? heroku.appdir.slice(2)
-      : heroku.appdir[0] === "/"
-      ? heroku.appdir.slice(1)
-      : heroku.appdir;
 }
 
-// Collate docker build args into arg list
-if (heroku.dockerBuildArgs) {
-  heroku.dockerBuildArgs = heroku.dockerBuildArgs
-    .split("\n")
-    .map((arg) => `${arg}=${process.env[arg]}`)
-    .join(",");
-  heroku.dockerBuildArgs = heroku.dockerBuildArgs
-    ? `--arg ${heroku.dockerBuildArgs}`
-    : "";
+function catNetrcFile({email, api_key}){
+  execComm(`cat >~/.netrc <<EOF
+  machine api.heroku.com
+      login ${email}
+      password ${api_key}
+  machine git.heroku.com
+      login ${email}
+      password ${api_key}
+  EOF`);
+
+  console.log("Created netrc file");
+
+
 }
 
-(async () => {
-  // Program logic
-  try {
-    // Just Login
-    if (heroku.justlogin) {
-      execSync(createCatFile(heroku));
-      console.log("Created and wrote to ~/.netrc");
-      execSync("heroku login");
-      return;
-    }
+function getInputVars(){
 
-    execSync(`git config user.name "Heroku-Deploy"`);
-    execSync(`git config user.email "${heroku.email}"`);
-    const status = execSync("git status --porcelain").toString().trim();
-    if (status) {
-      execSync(
-        'git add -A && git commit -m "Commited changes from previous actions"'
-      );
-    }
+  let inputVars = {
+      api_key: core.getInput("heroku_api_key"),
+      email: core.getInput("heroku_email"),
+      app_name: core.getInput("heroku_app_name"),
+      buildpacks: core.getInput("buildpacks"),
+      branch: core.getInput("branch"),
+      useforce: core.getInput("useforce"),
+      appdir: core.getInput("appdir"),
+      procfile: core.getInput("procfile"),
+      env_file: core.getInput("env_file"),
+      dynamicFiles: core.getInput("dynamicFiles"),
+  };
 
-    // Check if using Docker
-    if (!heroku.usedocker) {
-      // Check if Repo clone is shallow
-      const isShallow = execSync(
-        "git rev-parse --is-shallow-repository"
-      ).toString();
+  console.log("Obtained input vars");
 
-      // If the Repo clone is shallow, make it unshallow
-      if (isShallow === "true\n") {
-        execSync("git fetch --prune --unshallow");
-      }
-    }
+  return inputVars;
 
-    execSync(createCatFile(heroku));
-    console.log("Created and wrote to ~/.netrc");
+}
 
-    createProcfile(heroku);
-
-    execSync("heroku login");
-    if (heroku.usedocker) {
-      execSync("heroku container:login");
-    }
-    console.log("Successfully logged into heroku");
-
-    addRemote(heroku);
-    addConfig(heroku);
-
-    try {
-      deploy({ ...heroku, dontuseforce: true });
-    } catch (err) {
-      console.error(`
-            Unable to push branch because the branch is behind the deployed branch. Using --force to deploy branch. 
-            (If you want to avoid this, set dontuseforce to 1 in with: of .github/workflows/action.yml. 
-            Specifically, the error was: ${err}
-        `);
-
-      deploy(heroku);
-    }
-
-    if (heroku.healthcheck) {
-      if (typeof heroku.delay === "number" && heroku.delay !== NaN) {
-        await sleep(heroku.delay * 1000);
-      }
-
-      try {
-        const res = await p(heroku.healthcheck);
-        if (heroku.checkstring && heroku.checkstring !== res.body.toString()) {
-          healthcheckFailed(heroku);
-        }
-        console.log(res.body.toString());
-      } catch (err) {
-        console.log(err.message);
-        healthcheckFailed(heroku);
-      }
-    }
-
-    core.setOutput(
-      "status",
-      "Successfully deployed heroku app from branch " + heroku.branch
-    );
-  } catch (err) {
-    core.setFailed(err.toString());
-  }
-})();
+function execComm(comm){
+  return execSync(comm, {stdio: 'inherit'});
+}
