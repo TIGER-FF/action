@@ -1,25 +1,25 @@
-name: Push Container to Heroku
-
-on: 
-  push:
-    branches:
-      - master
-
+on: push
+name: Deploy to Heroku
 jobs:
-  build:
+  release:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v1
-    - name: Login to Heroku Container registry
-      with: 
-        HEROKU_API_KEY: ${{ secrets.HEROKU_API_KEY }}
-        heroku_app_name: mscloudd
-        heroku_email: wangpf321123@gmail.com
-    - name: Build and push
+    - uses: actions/checkout@master
+    - name: login
+      uses: actions/heroku@master
       env:
         HEROKU_API_KEY: ${{ secrets.HEROKU_API_KEY }}
-      run: heroku container:push -a ${{ secrets.HEROKU_APP_NAME }} web 
-    - name: Release
+      with:
+        args: container:login
+    - name: push
+      uses: actions/heroku@master
       env:
         HEROKU_API_KEY: ${{ secrets.HEROKU_API_KEY }}
-      run: heroku container:release -a ${{ secrets.HEROKU_APP_NAME }} web 
+      with:
+        args: container:push -a mscloudd web
+    - name: release
+      uses: actions/heroku@master
+      env:
+        HEROKU_API_KEY: ${{ secrets.HEROKU_API_KEY }}
+      with:
+        args: container:release -a mscloudd web
