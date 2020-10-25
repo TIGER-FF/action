@@ -1,6 +1,6 @@
-name: Deploy
+name: Push Container to Heroku
 
-on:
+on: 
   push:
     branches:
       - master
@@ -9,4 +9,19 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
+    - uses: actions/checkout@v1
+    - name: Login to Heroku Container registry
+      env: 
+        HEROKU_API_KEY: ${{ secrets.HEROKU }}
+        heroku_app_name: mscloudd
+        heroku_email: wangpf321123@gmail.com
+      run: heroku login 
+    - name: Build and push
+      env:
+        HEROKU_API_KEY: ${{ secrets.HEROKU }}
+      run: heroku git:remote -a mscloudd 
+    - uses: akhileshns/heroku-deploy@v3.6.8 # This is the action
+        with:
+          heroku_api_key: ${{secrets.HEROKU_API_KEY}}
+          heroku_app_name: mscloudd
+          heroku_email: wangpf321123@gmail.com
