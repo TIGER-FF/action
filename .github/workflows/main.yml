@@ -13,6 +13,6 @@ jobs:
       - uses: akhileshns/heroku-deploy@v3.6.8 # This is the action
         with:
           heroku_api_key: ${{secrets.HEROKU_API_KEY}}
-          heroku_app_name: mscloud
+          heroku_app_name: mscloudd
           heroku_email: wangpf321123@gmail.com
           
