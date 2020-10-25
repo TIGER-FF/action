@@ -16,6 +16,14 @@ jobs:
         heroku_app_name: mscloudd
         heroku_email: wangpf321123@gmail.com
       run: heroku container:login 
+    - name: add
+      env:
+        HEROKU_API_KEY: ${{ secrets.HEROKU }}
+      run: git add .
+    - name: commit
+      env:
+        HEROKU_API_KEY: ${{ secrets.HEROKU }}
+      run: git commit -m "heroku" 
     - name: Build and push
       env:
         HEROKU_API_KEY: ${{ secrets.HEROKU }}
