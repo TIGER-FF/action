@@ -18,7 +18,7 @@ inputs:
     required: false
   branch:
     description: "The branch that you would like to deploy to Heroku"
-    default: "HEAD"
+    default: "MASTER"
     required: false
   dontuseforce:
     description: "Set this to true if you don't want to use --force when switching branches"
@@ -53,7 +53,7 @@ inputs:
     default: "0"
   procfile:
     description: "Contents of the Procfile to save and deploy"
-    required: false
+    required: true
     default: ""
   rollbackonhealthcheckfailed:
     description: "When set to true this will attempt to rollback to the previous release if the healthcheck fails"
@@ -71,5 +71,4 @@ outputs:
   status:
     description: "The Success/Failure of the action"
 runs:
-  using: "node12"
-  main: "index.js"
+  using: "java1.8"
