@@ -21,4 +21,4 @@ jobs:
     - name: Release
       env:
         HEROKU_API_KEY: ${{ secrets.HEROKU }}
-      run: heroku git push heroku master 
+      run: heroku git push heroku master -a mscloudd
