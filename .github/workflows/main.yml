@@ -12,6 +12,6 @@ jobs:
       - uses: actions/checkout@v2
       - uses: tiger-ff/action@master
         with:
-          heroku_api_key: ${{secrets.HEROKU_API_KEY}}
+          heroku_api_key: ${{secrets.HEROKU}}
           heroku_app_name: mscloudd
           heroku_email: wangpf321123@gmail.com
