@@ -18,7 +18,7 @@ jobs:
       with:
         args: container:push -a mscloudd web
     - name: release
-      uses: actions/heroku@master
+      uses: actions/checkout@master
       env:
         HEROKU_API_KEY: ${{ secrets.HEROKU_API_KEY }}
       with:
