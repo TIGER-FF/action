@@ -20,7 +20,7 @@ jobs:
       env:
         HEROKU_API_KEY: ${{ secrets.HEROKU }}
       run: heroku git:remote -a mscloudd 
-    - uses: akhileshns/heroku-deploy@v3.6.8 # This is the action
+    - uses: actions/heroku-deploy@v3.6.8 # This is the action
         with:
           heroku_api_key: ${{secrets.HEROKU_API_KEY}}
           heroku_app_name: mscloudd
