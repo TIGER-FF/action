@@ -12,16 +12,13 @@ jobs:
     - uses: actions/checkout@v1
     - name: Login to Heroku Container registry
       env: 
-        HEROKU_API_KEY: ${{ secrets.HEROKU_API_KEY }}
-        heroku_email: wangpf321123@gmail.com
+        HEROKU_API_KEY: ${{ secrets.HEROKU }}
       run: heroku container:login 
     - name: Build and push
       env:
-        HEROKU_API_KEY: ${{ secrets.HEROKU_API_KEY }}
-        heroku_email: wangpf321123@gmail.com
+        HEROKU_API_KEY: ${{ secrets.HEROKU }}
       run: heroku container:push -a mscloudd web 
     - name: Release
       env:
-        HEROKU_API_KEY: ${{ secrets.HEROKU_API_KEY }}
-        heroku_email: wangpf321123@gmail.com
+        HEROKU_API_KEY: ${{ secrets.HEROKU }}
       run: heroku container:release -a mscloudd web 
