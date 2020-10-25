@@ -17,10 +17,7 @@ jobs:
       - name: push to heroku
         run: heroku git:remote -a mscloudd 
              git push heroku master
-         with:
-          heroku_api_key: ${{secrets.HEROKU_API_KEY}}
-          heroku_app_name: mscloudd
-          heroku_email: wangpf321123@gmail.com
+             
         
         
           
