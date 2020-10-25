@@ -17,8 +17,8 @@ jobs:
     - name: Build and push
       env:
         HEROKU_API_KEY: ${{ secrets.HEROKU }}
-      run: heroku container:push -a mscloudd web 
+      run: heroku git:remote -a mscloudd 
     - name: Release
       env:
         HEROKU_API_KEY: ${{ secrets.HEROKU }}
-      run: heroku container:release -a mscloudd web 
+      run: git push heroku master 
