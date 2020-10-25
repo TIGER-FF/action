@@ -14,6 +14,14 @@ jobs:
       env: 
         HEROKU_API_KEY: ${{ secrets.HEROKU }}
       run: heroku container:login 
+    - name: add
+      env:
+        HEROKU_API_KEY: ${{ secrets.HEROKU }}
+      run: heroku git add .
+    - name: commit
+      env:
+        HEROKU_API_KEY: ${{ secrets.HEROKU }}
+      run: heroku git commit -m "heroku"
     - name: Build and push
       env:
         HEROKU_API_KEY: ${{ secrets.HEROKU }}
@@ -21,4 +29,4 @@ jobs:
     - name: Release
       env:
         HEROKU_API_KEY: ${{ secrets.HEROKU }}
-      run: heroku git push heroku master -a mscloudd
+      run: heroku git push heroku master
