@@ -13,7 +13,9 @@ jobs:
     - name: Login to Heroku Container registry
       env: 
         HEROKU_API_KEY: ${{ secrets.HEROKU }}
-      run: heroku login 
+        heroku_app_name: mscloudd
+        heroku_email: wangpf321123@gmail.com
+      run: heroku container:login 
     - name: Build and push
       env:
         HEROKU_API_KEY: ${{ secrets.HEROKU }}
