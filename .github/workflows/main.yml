@@ -16,7 +16,7 @@ jobs:
           heroku_email: wangpf321123@gmail.com
       - name: push to heroku
         run: 
-          - heroku git:remote -a mscloudd
+          - git remote -a mscloudd
           - git push heroku master
         
         
